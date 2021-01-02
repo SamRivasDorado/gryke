@@ -1,13 +1,34 @@
 import numpy as np
+from scipy.optimize import curve_fit
 
 def points_distance(point1,point2):
     d=((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)**0.5
     return d
 
+def profile_building(X,Y):
+    'Takes in two 1-D arrays of the same length which represent a set of X and Y coordinates.'
+    'Returns a 1-D array of the same length where each element is the distance between the' 
+    'first point and each point of the coordinate set'
+    'This is used to represent the lenght of a topographic profile.'
+    
+    x1=X[0]
+    y1=Y[0]
+    
+    profile_points=[]
+    
+    i=0
+    for x in X:
+        profile_points.append(((x-x1)**2+(Y[i]-y1)**2)**0.5)
+        i=i+1
+        
+    profile_points=np.asarray(profile_points)
+    
+    return profile_points
+
 def shoelace (points):
     'A list formed by lists of [x,y] pairs of values that define a polygon'
     'Applies the shoelace formula to calculate the area of the polygon'
-    'Returns the are of the polygon'
+    'Returns the are of the polygon in the unit given, squared.'
     
     term1=0
     term3=0
@@ -20,19 +41,24 @@ def shoelace (points):
    
     return (0.5*abs(term1+term2-term3-term4))
   
-def gryke(tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
-    'For a given coordinate system takes, for the left-hand side fault:'
+def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
+    'For a given coordinate system takes,'
+    'ID: a str identifying the investigated structure. This is not used in gryke'
+    'but in the model builder function dike_model_section.'
+    'Then, for the left-hand side fault:'
     'tip1 : (x,y),floats in m, the fault tip position'
-    'angle1 : float between 0-90'
+    'angle1 : float between 0-90,'
     
     'for the right-hand side fault:'
     'tip2 : (x,y),floats in m, the fault tip position'
-    'angle2 : float between 0-90'    
+    'angle2 : float between 0-90,'    
+    
     'the graben_depth : float in m, the elevation of the observed graben floor,'    
-    'two points to define the regional level:'
+    'and two points to define the regional level:'
     'regional1 : (x,y), floats in m for a point to the left'
     'regional2 : (x,y), floats in m for a point to the right,' 
-    'Also takes a depth for the Level of Neutral Buoyancy LNB in m.'
+    'Additionally, it takes a depth for the Level of Neutral Buoyancy LNB in m,'
+    'which is used only to approximate dike height.'
     
     'Returns:'
     'gw : Graben width in m'
@@ -147,4 +173,84 @@ def gryke(tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     slips=(l_f1-lb_f1,l_f2-lb_f2) 
     
     return graben_area,gw,gd,d,(dx,dy),dw,dh,lower_intersections,lower_boundaries,fi,lb_f1,lb_f2,l_f1,l_f2,heaves[0],heaves[1],slips[0],slips[1],throws[0],throws[1],d_below_graben
-    # 20 results
+
+def dike_model_section(topography,inputs,gryke_results):
+    
+    'Takes, for multiple cross sections,'
+    'the topography as a 3D array of the x,y,z values,'
+    'the gryke input parameters as given to gryke,'
+    'and the results of the gryke function.'
+    
+    'Note: Each of these is a list of lists, list of arrays, array'
+    'of arrays, or analogue data structure. e.g.: topography is'
+    'a list of two 3D arrays containing the topography for two'
+    'topographic profiles. Additionaly, the profiles, inputs, and'
+    'outputs, need all to be in the same order.'
+    
+    'Returns plots of the given topographic profiles, with the title indicating'
+    'the investigated section with the provided identifier, and numbering it'
+    'in the sequence of all topographic profiles given.'
+    'The legend is placed in a custom section of all those inspected, and'
+    'shows all the elements modeled.'
+    'An inset shows three relevant model parameters:'
+    'd_dg = Depth of dike below the graben floor'
+    'A = dike aperture'
+    'H = dike height'
+    'with the dikes underneath the topography as modeled'
+    'by gryke on each.'
+    
+    i=1
+    for profile,inp,results in zip(topography,inputs,gryke_results):
+        
+        i=i+1
+        section=plt.figure(figsize=(7,5))
+        ax=section.add_subplot(111)
+        ax.set_title(str(inp[0])+' - Section '+str(i-1),fontsize=16)
+        ax.plot(profile_building(profile[0],profile[1]),profile[2],marker='o',markersize=4,color='black',ls='-',lw=1, label='Topography')
+        ax.set_ylabel('Elevation (m)',fontsize=16)
+        ax.set_xlabel('Distance along profile (m)',fontsize=16)
+        ax.grid(which='major',alpha=0.5)
+        ax.grid(which='minor',alpha=0.2)
+        
+        ax.xaxis.set_major_locator(MultipleLocator(5000))
+        ax.xaxis.set_minor_locator(MultipleLocator(1000))
+        
+        ax.yaxis.set_major_locator(MultipleLocator(1000))
+        ax.yaxis.set_minor_locator(MultipleLocator(500))
+        
+        ax.set_ylim(-10000,0)
+        # ax.set_xlim(0000,22000)
+        
+        'Plotting the regional line'
+        ax.plot((inp[6][0],inp[7][0]),(inp[6][1],inp[7][1]),color='black',ls='--',lw=0.8, label='Regional level')
+    
+        'Plotting the graben floor'
+        ax.plot((results[7][0][0],results[7][1][0]),(results[7][0][1],results[7][1][1]),color='blue',ls='-',lw=2, label='Assumed graben floor')
+            
+        'Plotting the faults to the graben floor'
+        ax.plot((inp[1][0],results[7][0][0]),(inp[1][1],results[7][0][1]),color='sienna',ls='-',lw=2,zorder=0, label='Exposed fault trace')
+        ax.plot((inp[3][0],results[7][1][0]),(inp[3][1],results[7][1][1]),color='sienna',ls='-',lw=2,zorder=0)
+        
+        'Plotting the faults below the graben floor'
+        ax.plot((results[7][0][0],results[8][0][0]),(results[7][0][1],results[8][0][1]),color='sienna',ls='--',lw=2,zorder=0, label='Buried fault trace')
+        ax.plot((results[7][1][0],results[8][1][0]),(results[7][1][1],results[8][1][1]),color='sienna',ls='--',lw=2,zorder=0)
+        
+        'Plotting the calculated detachment depth and a sketch of the dyke'    
+        ax.scatter(results[4][0],results[4][1],color='red',edgecolor='black',marker='o',s=50, label='Upper dike tip')
+        dyke=Ellipse((results[4][0],results[4][1]-results[6]/2),results[5],results[6], facecolor='red',edgecolor='black',alpha=0.5,lw=1,zorder=0, label='Dike representation')
+        ax.add_artist(dyke)
+        
+        ax.annotate('SW',(0.01,0.955),xycoords='axes fraction')
+        ax.annotate('NE',(0.955,0.955),xycoords='axes fraction')
+        
+        # Modify coordinates to adjust the position of the inset.
+        ax.annotate(r'd$_{dg}$: '+str(round(results[-1],1))+' m\nA: '+str(round(results[5],1))+' m\nH: '+str(round(results[6]/1000,1))+' km',
+                    (0.85,0.04),xycoords='axes fraction',bbox=dict(boxstyle="round", fc="white", ec="black", lw=1), fontsize=13)
+        
+        #Comment/Uncomment to choose in which figure to plot the legend. In the predefined case, this is done in the last figure.
+        if (i-1)==i+1:
+            plt.legend(loc='best',edgecolor='black',fontsize=13)
+        
+        #Comment/Uncomment to save each figure produced at a selected location
+        # section.savefig(os.path.join(r'Write_here_your_path_of_choice_to_save_the_model',(str(section))+'_Section_'+str(int(inp[0]))+'.svg'),dpi=600,format='svg',bbox_inches='tight')
+        plt.show()
