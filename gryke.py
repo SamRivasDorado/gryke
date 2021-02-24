@@ -212,6 +212,7 @@ def dike_model_section(topography,inputs,gryke_results):
         ax.grid(which='major',alpha=0.5)
         ax.grid(which='minor',alpha=0.2)
         
+        #All the x and y axis locators, as well as the y_lim below may be changed depending on the scale of investigation
         ax.xaxis.set_major_locator(MultipleLocator(5000))
         ax.xaxis.set_minor_locator(MultipleLocator(1000))
         
