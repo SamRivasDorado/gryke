@@ -1,7 +1,7 @@
 gryke is composed of a series of .py files, each of which are described below.
 
 # gryke.py
-A set of functions which applies the classic structural geology concept of area balance (Chamberlin, 1909) to a set of input parameters which describe a graben under the assumption that it was formed due to dike intrusion. The core function, gryke, returns a series of dike and fault parameters which allow to model the subsurface geometry of the intrusion in a cross section orthogonal to the investigated graben, through the helper function dike_model_section.
+A set of functions which applies the classic structural geology concept of area balance (Chamberlin, 1909) to model the geometry of a dike underneath a long linear graben. The core function, gryke, returns a series of dike and fault parameters which allow to model the subsurface geometry of the intrusion in a cross section orthogonal to the investigated graben, through the helper function dike_model_section.
 
 The calculations applied by the gryke core function are explained in detail in the paper 'Subsurface Geometry and Emplacement Conditions of a Giant Dike System in Elysium Fossae, Mars' (https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2020JE006512).
 
