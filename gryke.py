@@ -2,19 +2,35 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 def points_distance(point1,point2):
+    """
+    Parameters
+    ----------
+    points1: array-like object with the (x,y) coordinates of a point
+    points2: array-like object with the (x,y) coordinates of another point
+    x and y should be in the same units and within the same reference frame
+    
+    Returns
+    -------
+    The distance between point1 and point2 in the units given.
+    """
     d=((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)**0.5
     return d
 
 def profile_building(X,Y):
-    'Takes in two 1-D arrays of the same length which represent a set of X and Y coordinates.'
-    'Returns a 1-D array of the same length where each element is the distance between the' 
-    'first point and each point of the coordinate set'
-    'This is used to represent the lenght of a topographic profile.'
+    """
+    Parameters
+    ----------
+    X: 1D array with the x coordinates of a set of points
+    Y: 1D array with the y coordinates of a set of points
+    both of the same length.
     
-    x1=X[0]
-    y1=Y[0]
+    Returns
+    -------
+    1D array of the same length where each element is the 
+    distance between the first point and each point of the coordinate set
+    """
     
-    profile_points=[]
+    x1=X[0] ; y1=Y[0] ; profile_points=[]
     
     i=0
     for x in X:
@@ -26,12 +42,20 @@ def profile_building(X,Y):
     return profile_points
 
 def shoelace (points):
-    'A list formed by lists of [x,y] pairs of values that define a polygon'
-    'Applies the shoelace formula to calculate the area of the polygon'
-    'Returns the are of the polygon in the unit given, squared.'
+    """
+    Parameters
+    ----------
+    points: array-like object formed by tuples/lists of [x,y] pairs of values 
+    that define a polygon, ordered clockwise. x and y should be in the same
+    units.
     
-    term1=0
-    term3=0
+    Returns
+    ----------
+    The area of the polygon, in the square units of x and y
+    """
+    
+    term1=0 ; term3=0
+    
     for i in range (len(points)-1):
         term1=term1+points[i][0]*points[i+1][1]
         term3=term3+points[i+1][0]*points[i][1]
@@ -95,14 +119,9 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     
     # Calculate the intersection between the faults and the graben floor based
     # on the fault tips, fault angle, and graben depth. Then store the intersections.
-    tips=(tip1,tip2)
-    angles=(angle1,angle2)
+    tips=(tip1,tip2) ; angles=(angle1,angle2)
     
-    all_intersections=[]
-    
-    lower_intersections=[]
-    throws=[]
-    heaves=[]
+    all_intersections=[] ; lower_intersections=[] ; throws=[] ; heaves=[]
     
     i=0
     for tip,angle in zip(tips,angles):
@@ -161,11 +180,9 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     fault1_inverse=np.polyfit((tip1[1],lower_intersections[0][1]),(tip1[0],lower_intersections[0][0]),1)
     fault2_inverse=np.polyfit((tip2[1],lower_intersections[1][1]),(tip2[0],lower_intersections[1][0]),1)
     
-    fault1_inverse_poly1d=np.poly1d(fault1_inverse)
-    fault2_inverse_poly1d=np.poly1d(fault2_inverse)
+    fault1_inverse_poly1d=np.poly1d(fault1_inverse) ; fault2_inverse_poly1d=np.poly1d(fault2_inverse)
         
-    f1_low_bound_x=fault1_inverse_poly1d(dy)
-    f2_low_bound_x=fault2_inverse_poly1d(dy)
+    f1_low_bound_x=fault1_inverse_poly1d(dy) ; f2_low_bound_x=fault2_inverse_poly1d(dy)
     
     lower_boundaries=[(f1_low_bound_x,dy),(f2_low_bound_x,dy)]
 
