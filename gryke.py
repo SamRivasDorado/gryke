@@ -42,50 +42,59 @@ def shoelace (points):
     return (0.5*abs(term1+term2-term3-term4))
   
 def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
-    'For a given coordinate system takes,'
-    'ID: a str identifying the investigated structure. This is not used in gryke'
-    'but in the model builder function dike_model_section.'
-    'Then, for the left-hand side fault:'
-    'tip1 : (x,y),floats in m, the fault tip position'
-    'angle1 : float between 0-90,'
+    """
+    Parameters
+    -----------------------
+    ID: a str identifying the investigated structure. This is not used in gryke
+    but in the model builder function dike_model_section.
     
-    'for the right-hand side fault:'
-    'tip2 : (x,y),floats in m, the fault tip position'
-    'angle2 : float between 0-90,'    
+    Then, for the left-hand side fault:
+    tip1 : (x,y) , ints/floats in m, the fault tip position
+    angle1 : int/float between 0-90,
     
-    'the graben_depth : float in m, the elevation of the observed graben floor,'    
-    'and two points to define the regional level:'
-    'regional1 : (x,y), floats in m for a point to the left'
-    'regional2 : (x,y), floats in m for a point to the right,' 
-    'Additionally, it takes a depth for the Level of Neutral Buoyancy LNB in m,'
-    'which is used only to approximate dike height.'
+    for the right-hand side fault:
+    tip2 : (x,y), ints/floats in m, the fault tip position
+    angle2 : int/float between 0-90,   
     
-    'Returns:'
-    'gw : Graben width in m'
-    'gd :  graben depth in m between the mid point elevation of the regional and the graben depth'
-    'd : Depth of the dike below the midpoint of the regional'
-    '(dx,dy) : mid point of the graben floor in m, depth of dike relative to datum in m'
-    'dx and dy are the coordinates at which to place the dike tip'
-    'dw : Dike width in m'
-    'dh : Dike height in m'
-    'lower_intersections = A list of two tuples with (x,y) coordinates in m which define the intersections of the faults with the graben base'
-    'lower_boundaries: A list of two tuples with (x,y) coordinates in m which define the bottom depth to which to plot the faults, which is dy'
-    'fi : intersection point of the faults at depth'
-    'lb_f1, lb_f2 : length of the buried fault1 and fault 2 trace to the corresponding lower boundary'
-    'l_f1, lb_f2 : length of the buried fault1 trace to the corresponding lower boundary'
-    'heaves, '
-    'total_slips, '
-    'and throws, '
-    'for the fault1 to the left-hand side, and fault2 to the right-hand side'
-    'd_below_graben: dike depth below the graben floor in m'
+    graben_depth : int/float in m, the elevation of the observed graben floor,    
     
-    'All rounded to the second decimal'    
+    and two points to define the regional level:
+        regional1 : (x,y), ints/floats in m for a point to the left
+        regional2 : (x,y), ints/floats in m for a point to the right,
+    
+    LNB: int/float for the depth of the Level of Neutral Buoyancy LNB in m
+    
+    Returns
+    -----------------------
+    gw : graben width in m
+    gd :  graben depth in m between the mid point elevation of the regional and the graben depth
+    
+    d : depth of the dike below the midpoint of the regional
+    (dx,dy) : mid point of the graben floor in m, depth of dike relative to datum in m
+    dx and dy are the coordinates at which to place the dike tip
+    dw : dike width in m
+    dh : dike height in m
+    
+    lower_intersections : a list of two tuples with (x,y) coordinates in m which 
+    define the intersections of the faults with the graben base
+    lower_boundaries: a list of two tuples with (x,y) coordinates in m which 
+    define the bottom depth to which to plot the faults, which is dy
+    fi : intersection point of the faults at depth
+    lb_f1, lb_f2 : length of the buried fault1 and fault 2 trace to the corresponding lower boundary
+    l_f1, lb_f2 : length of the buried fault1 trace to the corresponding lower boundary
+    heaves : fault heaves in m  
+    total_slips: fault slips in m
+    throws: fault throws in m.
+    for the fault1 to the left-hand side ([0]), and fault2 to the right-hand side ([1])
+    
+    All rounded to the second decimal
+    """  
 
-    'Define a line for the base of the graben'
+    # Define a line for the base of the graben.
     graben_base=np.polyfit((0,20000),(graben_depth,graben_depth),1)
     
-    'Calculate the intersection between the faults and the graben floor based on the fault tips, fault angle, and graben depth.'
-    'Store the intersections'
+    # Calculate the intersection between the faults and the graben floor based
+    # on the fault tips, fault angle, and graben depth. Then store the intersections.
     tips=(tip1,tip2)
     angles=(angle1,angle2)
     
@@ -99,7 +108,7 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     for tip,angle in zip(tips,angles):
         x2=(((graben_depth-tip[1])/(np.cos(np.radians(90-angle))))**2-(graben_depth-tip[1])**2)**0.5+tip[0]
         
-        'To calculate the right x2 value for the second fault'
+        # Calculating the right x2 value for the second fault.
         if i==1:
             x2=tip[0]-abs(tip[0]-x2)
         
@@ -112,12 +121,13 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
         all_intersections.append((x2,y2))
         i=i+1
             
-    'Create lines that define the faults with the upper tips and intersections'
+    # Create lines that define the faults through the upper tips and lower intersections.
     fault1=np.polyfit((tip1[0],lower_intersections[0][0]),(tip1[1],lower_intersections[0][1]),1)
     fault2=np.polyfit((tip2[0],lower_intersections[1][0]),(tip2[1],lower_intersections[1][1]),1)
     
-    'Find the intersections of the faults with the regional line.Store the intersections'
-    'Here the second fault is calculated first for the all_intersections list to be ready for the shoelace formula.'
+    # Find the intersections of the faults with the regional line. Then store these.
+    # Here the second fault is calculated first for the all_intersections list to be 
+    # in the right order for the shoelace formula.
     upper_intersections=[]
     regional=np.polyfit((regional1[0],regional2[0]), (regional1[1],regional2[1]),1)
     for fault in (fault2,fault1):
@@ -127,10 +137,10 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
         upper_intersections.append((x3,y3))
         all_intersections.append((x3,y3))
     
-    'Calculate the lost area with all the previous intersections.'    
+    # Calculate the lost area with all the previous intersections.
     graben_area=shoelace(all_intersections)
     
-    'Area-balance'
+    # Perofming Area-balance
     gw=abs(tip2[0]-tip1[0])
     d1=abs(lower_intersections[0][0]-tip1[0])
     d2=abs(lower_intersections[1][0]-tip2[0])
@@ -144,10 +154,10 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     dx=np.average((lower_intersections[1][0],lower_intersections[0][0]))
     dh=(LNB-d)*2
     
-    'Calculating depth coordinates to which to plot the faults (the y coordinate is dy),'
-    'fault lengths from the lower intersections to that depth, and their intersection point. The coordinates of the depths'
-    'to which the faults are plotted are the -lower_boundaries-. Finally, the full fault lengths from the tip to the lower boundary'
-    'are calculated as well'
+    # Calculating the depth coordinates to which to plot the faults (the y coordinate is dy),
+    # fault lengths from the lower intersections to that depth, and their intersection point. 
+    # The coordinates of the depths to which the faults are plotted are the lower_boundaries. 
+    # Finally, the full fault lengths from the tip to the lower boundary are calculated.
     fault1_inverse=np.polyfit((tip1[1],lower_intersections[0][1]),(tip1[0],lower_intersections[0][0]),1)
     fault2_inverse=np.polyfit((tip2[1],lower_intersections[1][1]),(tip2[0],lower_intersections[1][0]),1)
     
@@ -175,29 +185,33 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     return graben_area,gw,gd,d,(dx,dy),dw,dh,lower_intersections,lower_boundaries,fi,lb_f1,lb_f2,l_f1,l_f2,heaves[0],heaves[1],slips[0],slips[1],throws[0],throws[1],d_below_graben
 
 def dike_model_section(topography,inputs,gryke_results):
+    """
+    Parameters
+    -----------------------
+    Takes, for multiple cross sections,
+    the topography as a 3D array of the x,y,z values,
+    the gryke input parameters as given to gryke,
+    and the results of the gryke function.
     
-    'Takes, for multiple cross sections,'
-    'the topography as a 3D array of the x,y,z values,'
-    'the gryke input parameters as given to gryke,'
-    'and the results of the gryke function.'
+    Note: Each of these is a list of lists, list of arrays, array
+    of arrays, or analogue data structure. e.g.: topography is
+    a list of two 3D arrays containing the topography for two
+    topographic profiles. Additionaly, the profiles, inputs, and
+    outputs, need all to be in the same order.
     
-    'Note: Each of these is a list of lists, list of arrays, array'
-    'of arrays, or analogue data structure. e.g.: topography is'
-    'a list of two 3D arrays containing the topography for two'
-    'topographic profiles. Additionaly, the profiles, inputs, and'
-    'outputs, need all to be in the same order.'
+    Returns
+    -----------------------
+    Plots of the given topographic profiles, with the title indicating
+    the investigated section with the provided identifier, and numbering it
+    in the sequence of all topographic profiles given. The legend is placed 
+    in a custom section of all those inspected, and shows all the elements modeled.
+    The dike is represented at depth.
     
-    'Returns plots of the given topographic profiles, with the title indicating'
-    'the investigated section with the provided identifier, and numbering it'
-    'in the sequence of all topographic profiles given.'
-    'The legend is placed in a custom section of all those inspected, and'
-    'shows all the elements modeled.'
-    'An inset shows three relevant model parameters:'
-    'd_dg = Depth of dike below the graben floor'
-    'A = dike aperture'
-    'H = dike height'
-    'with the dikes underneath the topography as modeled'
-    'by gryke on each.'
+    An inset shows three relevant model parameters:
+    d_dg : Depth of dike below the graben floor
+    A : dike aperture
+    H : dike height
+    """
     
     i=1
     for profile,inp,results in zip(topography,inputs,gryke_results):
@@ -212,7 +226,7 @@ def dike_model_section(topography,inputs,gryke_results):
         ax.grid(which='major',alpha=0.5)
         ax.grid(which='minor',alpha=0.2)
         
-        #All the x and y axis locators, as well as the y_lim below may be changed depending on the scale of investigation
+        #All the x and y axis locators, as well as the y_lim below may be changed depending on the scale of investigation.
         ax.xaxis.set_major_locator(MultipleLocator(5000))
         ax.xaxis.set_minor_locator(MultipleLocator(1000))
         
@@ -222,21 +236,21 @@ def dike_model_section(topography,inputs,gryke_results):
         ax.set_ylim(-10000,0)
         # ax.set_xlim(0000,22000)
         
-        'Plotting the regional line'
+        # Plotting the regional line.
         ax.plot((inp[6][0],inp[7][0]),(inp[6][1],inp[7][1]),color='black',ls='--',lw=0.8, label='Regional level')
     
-        'Plotting the graben floor'
+        # Plotting the graben floor.
         ax.plot((results[7][0][0],results[7][1][0]),(results[7][0][1],results[7][1][1]),color='blue',ls='-',lw=2, label='Assumed graben floor')
             
-        'Plotting the faults to the graben floor'
+        # Plotting the faults to the graben floor.
         ax.plot((inp[1][0],results[7][0][0]),(inp[1][1],results[7][0][1]),color='sienna',ls='-',lw=2,zorder=0, label='Exposed fault trace')
         ax.plot((inp[3][0],results[7][1][0]),(inp[3][1],results[7][1][1]),color='sienna',ls='-',lw=2,zorder=0)
         
-        'Plotting the faults below the graben floor'
+        # Plotting the faults below the graben floor.
         ax.plot((results[7][0][0],results[8][0][0]),(results[7][0][1],results[8][0][1]),color='sienna',ls='--',lw=2,zorder=0, label='Buried fault trace')
         ax.plot((results[7][1][0],results[8][1][0]),(results[7][1][1],results[8][1][1]),color='sienna',ls='--',lw=2,zorder=0)
         
-        'Plotting the calculated detachment depth and a sketch of the dyke'    
+        # Plotting the calculated detachment depth and a sketch of the dyke.   
         ax.scatter(results[4][0],results[4][1],color='red',edgecolor='black',marker='o',s=50, label='Upper dike tip')
         dyke=Ellipse((results[4][0],results[4][1]-results[6]/2),results[5],results[6], facecolor='red',edgecolor='black',alpha=0.5,lw=1,zorder=0, label='Dike representation')
         ax.add_artist(dyke)
