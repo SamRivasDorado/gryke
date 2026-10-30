@@ -1,5 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
+from matplotlib.ticker import (MultipleLocator)
+from matplotlib.patches import Ellipse
 
 def points_distance(point1,point2):
     """
@@ -201,7 +204,7 @@ def gryke(ID,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB):
     
     return graben_area,gw,gd,d,(dx,dy),dw,dh,lower_intersections,lower_boundaries,fi,lb_f1,lb_f2,l_f1,l_f2,heaves[0],heaves[1],slips[0],slips[1],throws[0],throws[1],d_below_graben
 
-def dike_model_section(topography,inputs,gryke_results):
+def dike_model_section(topography,inputs,gryke_results,xlims,ylims,xticks,yticks):
     """
     Parameters
     -----------------------
@@ -244,14 +247,14 @@ def dike_model_section(topography,inputs,gryke_results):
         ax.grid(which='minor',alpha=0.2)
         
         #All the x and y axis locators, as well as the y_lim below may be changed depending on the scale of investigation.
-        ax.xaxis.set_major_locator(MultipleLocator(5000))
-        ax.xaxis.set_minor_locator(MultipleLocator(1000))
+        ax.xaxis.set_major_locator(MultipleLocator(xticks[1]))
+        ax.xaxis.set_minor_locator(MultipleLocator(xticks[0]))
         
-        ax.yaxis.set_major_locator(MultipleLocator(1000))
-        ax.yaxis.set_minor_locator(MultipleLocator(500))
+        ax.yaxis.set_major_locator(MultipleLocator(yticks[1]))
+        ax.yaxis.set_minor_locator(MultipleLocator(yticks[0]))
         
-        ax.set_ylim(-10000,0)
-        # ax.set_xlim(0000,22000)
+        ax.set_ylim(ylims[0],ylims[1])
+        ax.set_xlim(xlims[0],xlims[1])
         
         # Plotting the regional line.
         ax.plot((inp[6][0],inp[7][0]),(inp[6][1],inp[7][1]),color='black',ls='--',lw=0.8, label='Regional level')
@@ -277,7 +280,7 @@ def dike_model_section(topography,inputs,gryke_results):
         
         # Modify coordinates to adjust the position of the inset.
         ax.annotate(r'd$_{dg}$: '+str(round(results[-1],1))+' m\nA: '+str(round(results[5],1))+' m\nH: '+str(round(results[6]/1000,1))+' km',
-                    (0.85,0.04),xycoords='axes fraction',bbox=dict(boxstyle="round", fc="white", ec="black", lw=1), fontsize=13)
+                    (0.77,0.04),xycoords='axes fraction',bbox=dict(boxstyle="round", fc="white", ec="black", lw=1), fontsize=13)
         
         #Comment/Uncomment to choose in which figure to plot the legend. In the predefined case, this is done in the last figure.
         if (i-1)==i+1:
