@@ -1,102 +1,162 @@
 import numpy as np
-from gryke import gryke                                             # The gryke.py file must be in the same folder as this file
-from gryke_1 import dike_model_section                              # All the files called below must be in the same folder as this file.
-                                                                    # Alternatively, the paths of each file may be provided.
-                                                                    # Preferably, all the files should be .csv files separated by ;
+from gryke import gryke                                             # The gryke.py file must be in the same folder as this file.
+                                                                    # All the data files may be given with their full paths.
+                                                                    # All the data files should be .csv files separated by ;
 
 ########################### Preparing the 2D data ###########################
-    
-files=['TopoFile1','TopoFile2','TopoFilen']                         # Write here the name of the files which contain the 2D geometry of the investigated horizons.
-                                                                    # Each should be in the same format as the provided Gryke_2D_section_Example.csv file. It may 
-                                                                    # contain the data for all the investigated cross sections, when only one horizon is investigated. 
-                                                                    # This is how the example file is constructed. However, alternatively, each file may contain data 
-                                                                    # for multiple horizons but for a single cross section.
 
-skips=[(),()]                                                       # A list of two tuples. The first tuple contains the header_skips required for reading the data in the
-                                                                    # files above. The second contains the footer_skips required for reading each of the files above.
-                                                                    # For more info on header and footer skips check the genfromtxt documentation.
+def prepare_topography (files, skips=None, header_rows=1):
+    """
+    Parameters
+    ----------
+    files : the path of a file, or a list of paths, containing the 2D geometry of
+    the investigated horizons. Each should be in the same format as the provided
+    gryke_2D_section_example.csv file: column 1 holds the profile ID, and columns
+    2, 3 and 4 hold the X, Y and Z coordinates. Other columns are ignored.
 
-# Do not edit from here .... #
+    skips : None (recommended), to separate the profiles in each file by their
+    profile ID, in the order in which they appear.
+    Alternatively, the header and footer skips required to read each profile, as
+    in previous versions. For a single file, a tuple of two tuples: the first
+    with the header_skips and the second with the footer_skips of each profile.
+    For several files, a list with one such tuple per file. For more info on
+    header and footer skips check the genfromtxt documentation.
 
-topo=[]                                                             # A list to store the geometry of all the studied profiles
-labels=[]                                                           # A list to store the desired labels for the studied profiles
+    header_rows : number of header rows at the top of each file, used when skips
+    is None.
 
-for skip,file in zip(skips,files):
-    temporary_set=[]
-    temporary_labels=[]
-    for hskip,fskip in zip(skip[0],skip[-1]):
-        x,y,z=np.genfromtxt(file,delimiter=';',usecols=(2,3,4),skip_header=hskip, skip_footer=fskip,unpack=True)
-        label=np.genfromtxt(file,delimiter=';',usecols=(1),dtype=str,skip_header=hskip, skip_footer=fskip,unpack=True)
-        array=np.array([x,y,z],dtype='float')
-        temporary_set.append(array)    
-        temporary_labels.append(label[0])     
+    Returns
+    ----------
+    topo : a list with one 3D array of the x,y,z values per profile
+    labels : a list with the profile ID of each profile, in the same order
+    """
 
-    topo.append(temporary_set)
-    labels.append(temporary_labels) 
-    
-# .... to here. #
+    if isinstance(files,str):
+        files=[files]
+
+    topo=[]                                                         # A list to store the geometry of all the studied profiles
+    labels=[]                                                       # A list to store the labels of the studied profiles
+
+    if skips is None:
+        for file in files:
+            ids=np.atleast_1d(np.genfromtxt(file,delimiter=';',usecols=(1),dtype=str,skip_header=header_rows))
+            xyz=np.atleast_2d(np.genfromtxt(file,delimiter=';',usecols=(2,3,4),skip_header=header_rows))
+            for profile_id in dict.fromkeys(ids):                   # The unique IDs, in order of appearance
+                topo.append(xyz[ids==profile_id].T.astype('float'))
+                labels.append(str(profile_id))
+
+    else:
+        # A single (header_skips, footer_skips) pair is accepted for a single file.
+        if np.isscalar(skips[0][0]):
+            skips=[skips]
+        if len(skips)!=len(files):
+            raise ValueError('One (header_skips, footer_skips) pair is needed per file: '+str(len(files))+' files and '+str(len(skips))+' pairs were given.')
+
+        for file,skip in zip(files,skips):
+            for hskip,fskip in zip(skip[0],skip[1]):
+                x,y,z=np.genfromtxt(file,delimiter=';',usecols=(2,3,4),skip_header=hskip, skip_footer=fskip,unpack=True)
+                label=np.atleast_1d(np.genfromtxt(file,delimiter=';',usecols=(1),dtype=str,skip_header=hskip, skip_footer=fskip,unpack=True))
+                array=np.array([x,y,z],dtype='float')
+
+                topo.append(array)
+                labels.append(str(label[0]))
+
+    if len(topo)==0:
+        raise ValueError('No topographic profiles were read from '+str(files)+'. Check the file paths and the skips.')
+
+    return topo, labels
+
 
 ########################### Preparing the input for gryke  ###########################
 
-datasets=('LabelForTopoFile1','LabelForTopoFile2','LabelForTopoFilen')                        # The desired names to label the data in files.
-files=('inputfile1','inputfile2','inputfilen')                                                # The files that contain the input parameters for gryke.
-                                                                                              # It should follow the same structure as the example file
-                                                                                              # Gryke_Input_Example.csv. This file contains 1 set of input
-                                                                                              # values for each topographic profile in Gryke_2D_section_Example.csv
-# Do not edit from here .... #
+def prepare_input_files (input_files, labels=None):
+    """
+    Parameters
+    ----------
+    input_files : the path of a file, or a list of paths, containing the input
+    parameters for gryke. Each should follow the same structure as the example
+    file Gryke_Input_Example.csv, with one header row and one row per profile:
+    Name;Profile_number;tip1_x;tip1_y;angle1;tip2_x;tip2_y;angle2;graben_depth;
+    regional1_x;regional1_y;regional2_x;regional2_y;LNB
+    The Profile_number column is not used.
 
-gryke_input=[] 
-tracks=[]
-n=[]
+    labels : optional, the profile IDs returned by prepare_topography. If given,
+    the inputs are returned in the same order as these labels, so that each
+    input matches its topographic profile. An error is raised if a label has
+    no input, and inputs without a label are left out with a warning.
 
-for element in topo:
-    n.append(len(topo))
+    Returns
+    ----------
+    gryke_input : a list with one tuple of gryke parameters per profile:
+    (Name, tip1, angle1, tip2, angle2, graben_depth, regional1, regional2, LNB)
+    """
+
+    if isinstance(input_files,str):
+        input_files=[input_files]
+
+    gryke_input=[]
+
+    for input_file in input_files:
+        names=np.atleast_1d(np.genfromtxt(input_file,delimiter=';',dtype=str,skip_header=1,usecols=(0)))
+        values=np.atleast_2d(np.genfromtxt(input_file,delimiter=';',skip_header=1,usecols=(2,3,4,5,6,7,8,9,10,11,12,13)))
+
+        for name,row in zip(names,values):
+            tip1x,tip1y,angle1,tip2x,tip2y,angle2,graben_depth,regional1x,regional1y,regional2x,regional2y,LNB=row
+            tip1=(tip1x,tip1y)
+            tip2=(tip2x,tip2y)
+            regional1=(regional1x,regional1y)
+            regional2=(regional2x,regional2y)
+            gryke_input.append((str(name),tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB))
+
+    if labels is None:
+        return gryke_input
+
+    # Matching the inputs to the topographic profiles.
+    names=[inp[0] for inp in gryke_input]
+    duplicates=sorted(set(n for n in names if names.count(n)>1))
+    if duplicates:
+        raise ValueError('These names appear more than once in the input files: '+', '.join(duplicates))
+    by_name=dict(zip(names,gryke_input))
+
+    missing=[label for label in labels if label not in by_name]
+    if missing:
+        raise ValueError('These topographic profiles have no input parameters: '+', '.join(missing))
+    extra=[name for name in names if name not in labels]
+    if extra:
+        print('Warning: these inputs have no topographic profile and are left out: '+', '.join(extra))
+
+    return [by_name[label] for label in labels]
 
 
-for n,file in zip(n,files):
-    temporary_input=[]
-    temporary_tracks=[]
-    for i in range(1,n+1):
-        Profile,tip1x,tip1y,angle1,tip2x,tip2y,angle2,graben_depth,regional1x,regional1y,regional2x,regional2y,LNB=np.genfromtxt(file,delimiter=';',skip_header=i,skip_footer=n-i,usecols=(1,2,3,4,5,6,7,8,9,10,11,12,13),unpack=True)
-        track=np.genfromtxt(file, delimiter=';',dtype='str',skip_header=i,skip_footer=n-i,usecols=(0),unpack=True)
-        tip1=(tip1x,tip1y)
-        tip2=(tip2x,tip2y)
-        regional1=(regional1x,regional1y)
-        regional2=(regional2x,regional2y)
-        temporary_tracks.append(track)
-        temporary_input.append((track,tip1,angle1,tip2,angle2,graben_depth,regional1,regional2,LNB))
-        
-    tracks.append(temporary_tracks)
-    gryke_input.append(temporary_input)
-    
-# .... to here #
-    
 ########################### Running gryke ###########################
 
-gryke_results=[]                                        # A list to store the results of running gryke, separated by dataset
+def run_gryke(gryke_input):
+    """
+    Parameters
+    ----------
+    gryke_input : a list of tuples of gryke parameters, as returned by prepare_input_files
 
-i=1
-for data in gryke_input:
-    temporary_results=[]
-    for parameters in data:
-        results=(gryke(parameters[0],parameters[1],parameters[2],parameters[3],parameters[4],parameters[5],parameters[6],parameters[7],parameters[8]))
-        temporary_results.append(results)
-        # file.write(str(i)+' '+str(results))
-        # file.write('\n')
-        # i=i+1
-    gryke_results.append(temporary_results)
+    Returns
+    ----------
+    gryke_results : a list with the results of gryke for each profile
+    gryke_output : the same results organised by parameter, i.e. a list where each
+    element holds the values of one of the gryke results for all the profiles
+    """
 
+    # A list to store the results of running gryke for each profile
+    gryke_results=[]
 
-gryke_output=[]                                         # A list to store the results of running gryke, which contains each of the parameters separately
+    for parameters in gryke_input:
+        gryke_results.append(gryke(*parameters))
 
-for i in range(len(gryke_results[0][0])):
-    temp_list=[]
-    for dataset in gryke_results:
-        for profile in dataset:
-            temp_list.append(profile[i])
-    gryke_output.append(temp_list)
- 
-########################### Uncomment below for plotting the results for all datasets ###########################
+    # A list to store the results of running gryke, which contains each of the parameters separately as a single list
+    gryke_output=[]
 
-# for topo,inputs,results in zip(topo,gryke_input,gryke_results):
-#     dike_model_section(topo, inputs, results)
+    for i in range(0,len(gryke_results[0])):
+        temp_result = []
+        for j in range(0,len(gryke_results)):
+            temp_result.append(gryke_results[j][i])
+
+        gryke_output.append(temp_result)
+
+    return gryke_results, gryke_output
